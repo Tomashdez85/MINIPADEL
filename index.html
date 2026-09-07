@@ -92,9 +92,6 @@
     .pair-select-row label { font-size: 0.75rem; color: var(--text-muted); width: 65px; }
     .pair-select-row select { flex: 1; padding: 5px; font-size: 0.85rem; background: #1e293b; }
 
-    .fun-banner { background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(245,158,11,0.15)); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-    .fun-banner p { font-size: 0.88rem; line-height: 1.4; color: #fbcfe8; }
-    
     .rules-box { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
     .rules-box h3 { color: #38bdf8; font-size: 1rem; margin-bottom: 8px; text-align: left; }
     .rule-item { margin-bottom: 10px; font-size: 0.82rem; line-height: 1.35; color: #cbd5e1; }
@@ -123,7 +120,7 @@
 
     /* Clasificación y Semáforo */
     table { width: 100%; border-collapse: collapse; text-align: left; }
-    th, td { padding: 6px 6px; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+    th, td { padding: 6px 5px; border-bottom: 1px solid var(--border); font-size: 0.76rem; }
     th { background: #0f172a; color: var(--text-muted); }
     
     .top4-row { background: rgba(245, 158, 11, 0.12); }
@@ -135,6 +132,8 @@
 
     .btn-expand { background: none; border: 1px solid var(--border); color: #38bdf8; font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; cursor: pointer; }
     .btn-expand:hover { background: #334155; }
+
+    .coef-pill { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #0284c7; padding: 2px 5px; border-radius: 4px; font-weight: bold; }
 
     /* Semáforo badges */
     .match-tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; margin: 2px; }
@@ -149,7 +148,6 @@
 
     .hidden { display: none; }
 
-    /* Modo Impresión / PDF */
     @media print {
       body { background: white !important; color: black !important; padding: 0; }
       .app-header, .tabs, button, .btn, .btn-next, .btn-pdf, .sidebar-column, #setup-section, #review-section { display: none !important; }
@@ -215,7 +213,7 @@
     <button class="btn" onclick="evaluateTournamentConfig()">📊 Calcular Modalidad y Ver Reglas</button>
   </div>
 
-  <!-- PANTALLA 2: ACEPTACIÓN DE MODALIDAD Y REGLAS -->
+  <!-- PANTALLA 2: ACEPTACIÓN DE MODALIDAD Y REGLAS CON COEFICIENTES -->
   <div id="modal-rules-section" class="card hidden">
     <h2>📋 Modalidad Recomendada & Normativa</h2>
     <div id="modal-rules-content"></div>
@@ -273,12 +271,11 @@
     </div>
   </div>
 
-  <!-- PANTALLA 5: TORNEO EN CURSO -->
+  <!-- PANTALLA 5: TORNEO EN CURSO (CON COEFICIENTES) -->
   <div id="tournament-section" class="hidden">
     <div class="tabs" id="tabs-container"></div>
 
     <div class="tournament-layout">
-      <!-- Columna Rondas y Fase Final -->
       <div class="main-column">
         <div id="round-view" class="card"></div>
         <div id="finals-view" class="card hidden">
@@ -289,15 +286,15 @@
         <button class="btn btn-danger" onclick="confirmReset()">⚠️ Reiniciar Torneo</button>
       </div>
 
-      <!-- Columna Clasificación con Semáforo -->
+      <!-- Columna Clasificación Ponderada por Coeficiente -->
       <div class="sidebar-column">
         <div class="card sidebar-sticky">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <h3 style="color: #38bdf8; font-size: 1.05rem; margin: 0;">📊 Clasificación en Directo</h3>
+            <h3 style="color: #38bdf8; font-size: 1.05rem; margin: 0;">📊 Clasificación Oficial (Por Coeficiente)</h3>
             <button class="btn btn-pdf" onclick="showFullCalendarPDF()">📄 Ver Calendario / PDF</button>
           </div>
           <p style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px; text-align: center;">
-            <span class="tag-badge tag-gold">1º-4º Oro</span> | <span class="tag-badge tag-silver">5º-8º Plata</span> (Haz clic en una pareja para auditar sus partidos)
+            ⚖️ <strong>Clasificación Ponderada:</strong> Se divide por partidos jugados (PJ) para igualar a las parejas que descansan más.
           </p>
           <table>
             <thead>
@@ -305,8 +302,9 @@
                 <th>#</th>
                 <th>Pareja</th>
                 <th>PJ</th>
+                <th>Coef (Pts/PJ)</th>
                 <th>Pts</th>
-                <th>Dif</th>
+                <th>Dif/PJ</th>
                 <th>Auditoría</th>
               </tr>
             </thead>
@@ -350,7 +348,7 @@
   };
 
   window.onload = () => {
-    const saved = localStorage.getItem('padel_pro_v12');
+    const saved = localStorage.getItem('padel_pro_v13');
     if (saved) {
       const parsed = JSON.parse(saved);
       state = parsed.state;
@@ -364,7 +362,7 @@
   };
 
   function saveState() {
-    localStorage.setItem('padel_pro_v12', JSON.stringify({ state, config }));
+    localStorage.setItem('padel_pro_v13', JSON.stringify({ state, config }));
   }
 
   function renderConfigInputs() {
@@ -395,8 +393,8 @@
         <h3>Estructura Calculada para tu Torneo:</h3>
         <div class="rule-item">⏱️ <strong>Duración total:</strong> ${config.time} minutos con ${config.courts} pistas para ${config.players} jugadores (${config.pairs} parejas).</div>
         <div class="rule-item">🎾 <strong>Rondas Programadas:</strong> <strong>${config.rounds} Rondas</strong> de <strong>${config.roundPlayTime} min de juego</strong> + 5 min de cambio de pista.</div>
-        <div class="rule-item">☕ <strong>Capacidad y Descansos:</strong> En cada ronda juegan simultáneamente hasta ${Math.min(config.courts * 2, config.pairs)} parejas (${Math.min(config.courts, Math.floor(config.pairs / 2))} partidos). ${config.pairs > config.courts * 2 ? `Descansan exactamente ${config.pairs - config.courts * 2} parejas por ronda de forma rotativa.` : '¡Nadie descansa, 100% tiempo de juego!'}</div>
-        <div class="rule-item">🔢 <strong>Puntuación:</strong> 3 Puntos por victoria | 1 Punto por empate | 0 Puntos por derrota. Desempate: Diferencial de juegos (JF - JC).</div>
+        <div class="rule-item">⚖️ <strong>Igualación por Coeficiente (Justicia Deportiva):</strong> Si alguna pareja juega 4 partidos y otra 5 por los descansos de pista, la clasificación se calcula automáticamente mediante el <strong>Coeficiente de Puntos por Partido (Pts/PJ)</strong> y <strong>Diferencial de Juegos por Partido (Dif/PJ)</strong>. ¡Nadie sale perjudicado por descansar más!</div>
+        <div class="rule-item">🔢 <strong>Puntuación en Pista:</strong> 3 Puntos por victoria | 1 Punto por empate | 0 Puntos por derrota. Punto de Oro en 40-40.</div>
         <div class="rule-item">🏆 <strong>Fases Finales:</strong> Playoffs automáticos de Oro (1º al 4º) y Plata (5º al 8º).</div>
       </div>
     `;
@@ -417,11 +415,7 @@
     document.getElementById('player-target').innerText = config.players;
 
     const genderSelect = document.getElementById('p-gender');
-    if (config.type === 'normal') {
-      genderSelect.style.display = 'none';
-    } else {
-      genderSelect.style.display = 'block';
-    }
+    genderSelect.style.display = (config.type === 'normal') ? 'none' : 'block';
 
     renderPlayers();
     saveState();
@@ -664,7 +658,6 @@
     saveState();
   }
 
-  // GENERADOR GENÉRICO Y EQUITATIVO DE CALENDARIO
   function generateScheduleEngine() {
     const numPairs = config.pairs;
     const numCourts = config.courts;
@@ -864,12 +857,14 @@
     renderSidebarStandings();
   }
 
+  // CÁLCULO ESTRICTO POR COEFICIENTE PONDERADO
   function calculateStandings() {
     const stats = state.pairs.map(p => ({
       id: p.id,
       pairObj: p,
       name: `P${p.id}: ${p.p1.name} & ${p.p2.name}`,
       pj: 0, pg: 0, pe: 0, pp: 0, jf: 0, jc: 0, pts: 0, dif: 0,
+      coefPts: 0, coefDif: 0, coefJf: 0,
       matchAudit: []
     }));
 
@@ -912,8 +907,15 @@
       });
     });
 
-    stats.forEach(t => t.dif = t.jf - t.jc);
-    stats.sort((a, b) => b.pts - a.pts || b.dif - a.dif || b.jf - a.jf);
+    stats.forEach(t => {
+      t.dif = t.jf - t.jc;
+      t.coefPts = (t.pj > 0) ? (t.pts / t.pj) : 0;
+      t.coefDif = (t.pj > 0) ? (t.dif / t.pj) : 0;
+      t.coefJf  = (t.pj > 0) ? (t.jf / t.pj) : 0;
+    });
+
+    // Ordenar por Coeficiente de Puntos -> Coeficiente de Diferencial -> Coeficiente de Juegos a Favor
+    stats.sort((a, b) => b.coefPts - a.coefPts || b.coefDif - a.coefDif || b.coefJf - a.coefJf);
     return stats;
   }
 
@@ -937,8 +939,9 @@
           <td><strong>${i + 1}º</strong></td>
           <td>${t.name} ${tagHtml}</td>
           <td><strong>${t.pj}</strong></td>
-          <td><strong>${t.pts}</strong></td>
-          <td>${t.dif > 0 ? '+' : ''}${t.dif} (${t.jf}-${t.jc})</td>
+          <td><span class="coef-pill">${t.coefPts.toFixed(2)}</span></td>
+          <td>${t.pts}</td>
+          <td>${t.coefDif > 0 ? '+' : ''}${t.coefDif.toFixed(2)} (${t.dif > 0 ? '+' : ''}${t.dif})</td>
           <td><button class="btn-expand" onclick="toggleAudit(${t.id})">${state.expandedAuditPair === t.id ? 'Ocultar' : 'Ver'}</button></td>
         </tr>
       `;
@@ -954,8 +957,10 @@
 
         html += `
           <tr style="background: #090d16;">
-            <td colspan="6" style="padding: 6px 10px;">
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 2px;">Historial semáforo de P${t.id}:</div>
+            <td colspan="7" style="padding: 6px 10px;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 2px;">
+                Historial semáforo de P${t.id} • ${t.pj} PJ (Coef: ${t.coefPts.toFixed(2)} pts/partido):
+              </div>
               ${auditBadges}
             </td>
           </tr>
@@ -981,7 +986,7 @@
         <button class="btn btn-pdf" onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
       </div>
       <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
-        Consulta y audita todos los enfrentamientos y pistas de las ${config.rounds} rondas:
+        Enfrentamientos y pistas de las ${config.rounds} rondas:
       </p>
     `;
 
@@ -1057,7 +1062,7 @@
 
     let html = `
       <div class="bracket-section bracket-gold">
-        <h3 style="color: var(--gold); text-align: left;">🥇 Cuadro de Honor (Puestos 1º al 4º)</h3>
+        <h3 style="color: var(--gold); text-align: left;">🥇 Cuadro de Honor (Puestos 1º al 4º por Coeficiente)</h3>
         <div class="match-card">
           <div class="pista-header"><span>SEMIFINAL 1 (1º vs 4º)</span></div>
           <div class="match-body">
@@ -1106,7 +1111,7 @@
       </div>
 
       <div class="bracket-section bracket-silver">
-        <h3 style="color: #94a3b8; text-align: left;">🥈 Cuadro de Consolación (Puestos 5º al 8º)</h3>
+        <h3 style="color: #94a3b8; text-align: left;">🥈 Cuadro de Consolación (Puestos 5º al 8º por Coeficiente)</h3>
         <div class="match-card">
           <div class="pista-header"><span>SEMIFINAL PLATA 1 (5º vs 8º)</span></div>
           <div class="match-body">
@@ -1150,7 +1155,7 @@
   function confirmReset() {
     if (confirm('¿ATENCIÓN: Quieres borrar los resultados y reiniciar el torneo?')) {
       if (confirm('¿Confirmas de verdad? Esta acción no se puede deshacer.')) {
-        localStorage.removeItem('padel_pro_v12');
+        localStorage.removeItem('padel_pro_v13');
         location.reload();
       }
     }
